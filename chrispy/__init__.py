@@ -1,22 +1,12 @@
-class CustomDict(dict):
-    def __setitem__(self, *args, **kwargs) -> None:
-        super().__setitem__(*args, **kwargs)
-        update_defaults()
-
-BETTER_DEFAULTS = CustomDict({
-    "numpy.linspace": {
-        "kwargs": {
-            "endpoint": False,
-        }
-    }
-})
-
 import importlib
 import functools
+import logging
 
-def update_defaults():
-    """Update the defaults of some functions in numpy."""
-    for full_name, defaults in BETTER_DEFAULTS.items():
+log = logging.getLogger(__name__)
+
+
+class CustomDict(dict):
+    def __setitem__(self, full_name, defaults) -> None:
         module, func_name = full_name.split(".", 1)
         module = importlib.import_module(module)
         func = getattr(module, func_name)
@@ -33,7 +23,15 @@ def update_defaults():
                     if i >= len(args):
                         args.append(v)
             return func(*args, **kwargs)
-        
-        setattr(module, func_name, new_func)
 
-update_defaults()
+        log.critical(f"Using ChrisPy for {full_name} - modifying defaults!")
+
+        setattr(module, func_name, new_func)
+        super().__setitem__(full_name, defaults)
+
+    def update(self, other: dict) -> None:
+        for k, v in other.items():
+            self[k] = v
+
+
+BETTER_DEFAULTS = CustomDict()
